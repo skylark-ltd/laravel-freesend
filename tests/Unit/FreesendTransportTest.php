@@ -1,13 +1,15 @@
 <?php
 
 use GuzzleHttp\Client;
-use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7\Response;
 use Skylarkltd\Freesend\FreesendTransport;
+use Skylarkltd\Freesend\UrlAttachment;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Exception\LogicException;
 
 beforeEach(function () {
     $this->apiKey = "test-api-key";
@@ -194,7 +196,7 @@ it("throws exception when no recipient is provided", function () {
     $email->text("Test");
 
     $transport->send($email);
-})->throws(\Symfony\Component\Mime\Exception\LogicException::class);
+})->throws(LogicException::class);
 
 it("handles attachments with base64 encoding", function () {
     $capturedRequest = null;
@@ -259,16 +261,12 @@ it("handles url-based attachments via registry", function () {
 
     // Create a URL attachment - this registers the URL in the static registry
     $url = "https://example.com/files/document.pdf";
-    \Skylarkltd\Freesend\UrlAttachment::fromUrl(
-        $url,
-        "document.pdf",
-        "application/pdf",
-    );
+    UrlAttachment::fromUrl($url, "document.pdf", "application/pdf");
 
     // Get all registered markers by checking what extractUrl accepts
     // We need to find the marker that was just registered
     // Since we can't access the registry directly, we'll use reflection
-    $reflection = new ReflectionClass(\Skylarkltd\Freesend\UrlAttachment::class);
+    $reflection = new ReflectionClass(UrlAttachment::class);
     $registryProperty = $reflection->getProperty("urlRegistry");
     $registryProperty->setAccessible(true);
     $registry = $registryProperty->getValue();
@@ -296,8 +294,7 @@ it("handles url-based attachments via registry", function () {
         ->toHaveKey("url", $url)
         ->not->toHaveKey("content");
 
-    // Clean up
-    \Skylarkltd\Freesend\UrlAttachment::clearRegistry();
+    UrlAttachment::clearRegistry();
 });
 
 it("sends both html and text content when provided", function () {
