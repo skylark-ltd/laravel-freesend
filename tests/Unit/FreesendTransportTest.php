@@ -4,7 +4,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
-use Skylark\Freesend\FreesendTransport;
+use Skylarkltd\Freesend\FreesendTransport;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
@@ -259,7 +259,7 @@ it("handles url-based attachments via registry", function () {
 
     // Create a URL attachment - this registers the URL in the static registry
     $url = "https://example.com/files/document.pdf";
-    \Skylark\Freesend\UrlAttachment::fromUrl(
+    \Skylarkltd\Freesend\UrlAttachment::fromUrl(
         $url,
         "document.pdf",
         "application/pdf",
@@ -268,7 +268,7 @@ it("handles url-based attachments via registry", function () {
     // Get all registered markers by checking what extractUrl accepts
     // We need to find the marker that was just registered
     // Since we can't access the registry directly, we'll use reflection
-    $reflection = new ReflectionClass(\Skylark\Freesend\UrlAttachment::class);
+    $reflection = new ReflectionClass(\Skylarkltd\Freesend\UrlAttachment::class);
     $registryProperty = $reflection->getProperty("urlRegistry");
     $registryProperty->setAccessible(true);
     $registry = $registryProperty->getValue();
@@ -297,7 +297,7 @@ it("handles url-based attachments via registry", function () {
         ->not->toHaveKey("content");
 
     // Clean up
-    \Skylark\Freesend\UrlAttachment::clearRegistry();
+    \Skylarkltd\Freesend\UrlAttachment::clearRegistry();
 });
 
 it("sends both html and text content when provided", function () {

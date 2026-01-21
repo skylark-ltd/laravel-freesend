@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Mail;
-use Skylark\Freesend\FreesendTransport;
+use Skylarkltd\Freesend\FreesendTransport;
 
 it('registers the freesend mail transport', function () {
     $mailer = Mail::mailer('freesend');

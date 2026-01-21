@@ -1,6 +1,6 @@
 <?php
 
-namespace Skylark\Freesend;
+namespace Skylarkltd\Freesend;
 
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;

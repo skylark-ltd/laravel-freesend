@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Mail\Attachment;
-use Skylark\Freesend\UrlAttachment;
+use Skylarkltd\Freesend\UrlAttachment;
 
 beforeEach(function () {
     UrlAttachment::clearRegistry();

@@ -1,5 +1,5 @@
 {
-  "name": "skylark/laravel-freesend",
+  "name": "skylarkltd/laravel-freesend",
   "description": "Laravel mail driver for the Freesend email API",
   "keywords": [
     "laravel",
@@ -28,18 +28,18 @@
   },
   "autoload": {
     "psr-4": {
-      "Skylark\\Freesend\\": "src/"
+      "Skylarkltd\\Freesend\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Skylark\\Freesend\\Tests\\": "tests/"
+      "Skylarkltd\\Freesend\\Tests\\": "tests/"
     }
   },
   "extra": {
     "laravel": {
       "providers": [
-        "Skylark\\Freesend\\FreesendServiceProvider"
+        "Skylarkltd\\Freesend\\FreesendServiceProvider"
       ]
     }
   },

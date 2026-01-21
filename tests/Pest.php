@@ -1,6 +1,6 @@
 <?php
 
-use Skylark\Freesend\Tests\TestCase;
+use Skylarkltd\Freesend\Tests\TestCase;
 
 /*
 |--------------------------------------------------------------------------

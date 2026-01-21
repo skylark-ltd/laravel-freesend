@@ -1,9 +1,9 @@
 <?php
 
-namespace Skylark\Freesend\Tests;
+namespace Skylarkltd\Freesend\Tests;
 
 use Orchestra\Testbench\TestCase as Orchestra;
-use Skylark\Freesend\FreesendServiceProvider;
+use Skylarkltd\Freesend\FreesendServiceProvider;
 
 /**
  * Base test case for package tests.

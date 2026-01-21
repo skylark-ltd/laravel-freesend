@@ -7,7 +7,7 @@ A Laravel mail driver for the [Freesend](https://freesend.metafog.io) email API.
 Install the package via Composer:
 
 ```bash
-composer require skylark/laravel-freesend
+composer require skylarkltd/laravel-freesend
 ```
 
 ## Configuration
@@ -121,7 +121,7 @@ The Freesend API supports fetching attachments directly from URLs, which can be 
 
 ```php
 use Illuminate\Mail\Mailables\Attachment;
-use Skylark\Freesend\UrlAttachment;
+use Skylarkltd\Freesend\UrlAttachment;
 
 public function attachments(): array
 {
@@ -176,7 +176,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
-use Skylark\Freesend\UrlAttachment;
+use Skylarkltd\Freesend\UrlAttachment;
 
 class OrderConfirmation extends Mailable implements ShouldQueue
 {

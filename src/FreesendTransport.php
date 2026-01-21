@@ -1,6 +1,6 @@
 <?php
 
-namespace Skylark\Freesend;
+namespace Skylarkltd\Freesend;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
