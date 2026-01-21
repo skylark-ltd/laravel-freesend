@@ -35,7 +35,7 @@ it("sends a basic email successfully", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from("sender@example.com")
         ->to("recipient@example.com")
         ->subject("Test Subject")
@@ -66,7 +66,7 @@ it("sends an email with html content", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from("sender@example.com")
         ->to("recipient@example.com")
         ->subject("Test Subject")
@@ -103,7 +103,7 @@ it("includes from name when provided", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from(new Address("sender@example.com", "John Doe"))
         ->to("recipient@example.com")
         ->subject("Test Subject")
@@ -138,7 +138,7 @@ it("sends correct authorization header", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from("sender@example.com")
         ->to("recipient@example.com")
         ->subject("Test")
@@ -161,7 +161,7 @@ it("throws exception on api error", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from("sender@example.com")
         ->to("recipient@example.com")
         ->subject("Test")
@@ -184,7 +184,7 @@ it("throws exception when no recipient is provided", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from("sender@example.com")
         ->subject("Test")
         ->text("Test");
@@ -212,7 +212,7 @@ it("handles attachments with base64 encoding", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from("sender@example.com")
         ->to("recipient@example.com")
         ->subject("Test")
@@ -253,7 +253,7 @@ it("handles url-based attachments", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from("sender@example.com")
         ->to("recipient@example.com")
         ->subject("Test")
@@ -304,7 +304,7 @@ it("sends both html and text content when provided", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from("sender@example.com")
         ->to("recipient@example.com")
         ->subject("Test Subject")
@@ -341,7 +341,7 @@ it("sends to correct endpoint", function () {
 
     $transport = new FreesendTransport($this->apiKey, $customEndpoint, $client);
 
-    $email = new Email()
+    $email = (new Email())
         ->from("sender@example.com")
         ->to("recipient@example.com")
         ->subject("Test")
