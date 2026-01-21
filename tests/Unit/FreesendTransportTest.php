@@ -237,7 +237,7 @@ it("handles attachments with base64 encoding", function () {
         ->toHaveKey("contentType", "text/plain");
 });
 
-it("handles url-based attachments", function () {
+it("handles url-based attachments via registry", function () {
     $capturedRequest = null;
 
     $mock = new MockHandler([
@@ -257,25 +257,24 @@ it("handles url-based attachments", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    // Create URL attachment using the UrlAttachment helper
+    // Create a URL attachment - this registers the URL in the static registry
     $url = "https://example.com/files/document.pdf";
-    $urlAttachment = \Skylark\Freesend\UrlAttachment::fromUrl(
+    \Skylark\Freesend\UrlAttachment::fromUrl(
         $url,
         "document.pdf",
         "application/pdf",
     );
 
-    // Get the marker content from the attachment
-    $marker = null;
-    $urlAttachment->attachTo(
-        new class ($marker) {
-            public function __construct(private &$marker) {}
-            public function attach($data, $options = [])
-            {
-                $this->marker = is_callable($data) ? $data() : $data;
-            }
-        },
-    );
+    // Get all registered markers by checking what extractUrl accepts
+    // We need to find the marker that was just registered
+    // Since we can't access the registry directly, we'll use reflection
+    $reflection = new ReflectionClass(\Skylark\Freesend\UrlAttachment::class);
+    $registryProperty = $reflection->getProperty("urlRegistry");
+    $registryProperty->setAccessible(true);
+    $registry = $registryProperty->getValue();
+
+    // Get the marker (should be the only one since we clear in beforeEach... but we don't have that here)
+    $marker = array_key_first($registry);
 
     $email = createEmail();
     $email->from("sender@example.com");
@@ -294,8 +293,11 @@ it("handles url-based attachments", function () {
         ->toHaveCount(1)
         ->and($body["attachments"][0])
         ->toHaveKey("filename", "document.pdf")
-        ->toHaveKey("url", "https://example.com/files/document.pdf")
+        ->toHaveKey("url", $url)
         ->not->toHaveKey("content");
+
+    // Clean up
+    \Skylark\Freesend\UrlAttachment::clearRegistry();
 });
 
 it("sends both html and text content when provided", function () {
