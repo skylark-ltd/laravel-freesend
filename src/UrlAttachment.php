@@ -44,11 +44,24 @@ use Illuminate\Mail\Attachment;
 class UrlAttachment
 {
     /**
+     * Prefix used to identify URL attachment markers in content.
+     */
+    private const MARKER_PREFIX = "FREESEND_URL_ATTACHMENT:";
+
+    /**
+     * Registry mapping markers to URLs.
+     *
+     * @var array<string, string>
+     */
+    private static array $urlRegistry = [];
+
+    /**
      * Create a URL-based attachment for use with the Freesend transport.
      *
-     * This method creates a Laravel Attachment that is marked with a special
-     * header. When the FreesendTransport processes this attachment, it will
-     * send the URL to the Freesend API instead of base64-encoding the content.
+     * This method creates a Laravel Attachment with a special marker in its
+     * content. When the FreesendTransport processes this attachment, it will
+     * recognize the marker and send the URL to the Freesend API instead of
+     * base64-encoding the content.
      *
      * @param string $url The HTTP/HTTPS URL where the file can be fetched.
      * @param string $filename The filename to use for the attachment in the email.
@@ -82,14 +95,52 @@ class UrlAttachment
         string $filename,
         ?string $contentType = null,
     ): Attachment {
-        $attachment = Attachment::fromData(fn() => "", $filename)->withHeaders([
-            FreesendTransport::URL_ATTACHMENT_HEADER => $url,
-        ]);
+        // Create a unique marker for this URL
+        $marker = self::MARKER_PREFIX . md5($url . $filename . microtime());
+
+        // Store the URL in the registry
+        self::$urlRegistry[$marker] = $url;
+
+        // Create attachment with the marker as content
+        $attachment = Attachment::fromData(fn() => $marker, $filename);
 
         if ($contentType !== null) {
             $attachment = $attachment->withMime($contentType);
         }
 
         return $attachment;
+    }
+
+    /**
+     * Extract a URL from attachment content if it's a URL marker.
+     *
+     * @param string $content The attachment content to check.
+     *
+     * @return string|null The URL if found, null otherwise.
+     *
+     * @internal Used by FreesendTransport to detect URL attachments.
+     */
+    public static function extractUrl(string $content): ?string
+    {
+        if (
+            str_starts_with($content, self::MARKER_PREFIX) &&
+            isset(self::$urlRegistry[$content])
+        ) {
+            return self::$urlRegistry[$content];
+        }
+
+        return null;
+    }
+
+    /**
+     * Clear the URL registry.
+     *
+     * @return void
+     *
+     * @internal Used for testing purposes.
+     */
+    public static function clearRegistry(): void
+    {
+        self::$urlRegistry = [];
     }
 }

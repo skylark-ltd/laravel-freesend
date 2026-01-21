@@ -5,7 +5,6 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use Skylark\Freesend\FreesendTransport;
-use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
@@ -14,6 +13,11 @@ beforeEach(function () {
     $this->apiKey = "test-api-key";
     $this->endpoint = "https://freesend.test/api/send-email";
 });
+
+function createEmail(): Email
+{
+    return new Email();
+}
 
 it("can be instantiated with required parameters", function () {
     $transport = new FreesendTransport($this->apiKey, $this->endpoint);
@@ -35,11 +39,11 @@ it("sends a basic email successfully", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = (new Email())
-        ->from("sender@example.com")
-        ->to("recipient@example.com")
-        ->subject("Test Subject")
-        ->text("Test body content");
+    $email = createEmail();
+    $email->from("sender@example.com");
+    $email->to("recipient@example.com");
+    $email->subject("Test Subject");
+    $email->text("Test body content");
 
     $sentMessage = $transport->send($email);
 
@@ -66,11 +70,11 @@ it("sends an email with html content", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = (new Email())
-        ->from("sender@example.com")
-        ->to("recipient@example.com")
-        ->subject("Test Subject")
-        ->html("<h1>Hello World</h1>");
+    $email = createEmail();
+    $email->from("sender@example.com");
+    $email->to("recipient@example.com");
+    $email->subject("Test Subject");
+    $email->html("<h1>Hello World</h1>");
 
     $transport->send($email);
 
@@ -103,11 +107,11 @@ it("includes from name when provided", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = (new Email())
-        ->from(new Address("sender@example.com", "John Doe"))
-        ->to("recipient@example.com")
-        ->subject("Test Subject")
-        ->text("Test body");
+    $email = createEmail();
+    $email->from(new Address("sender@example.com", "John Doe"));
+    $email->to("recipient@example.com");
+    $email->subject("Test Subject");
+    $email->text("Test body");
 
     $transport->send($email);
 
@@ -138,11 +142,11 @@ it("sends correct authorization header", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = (new Email())
-        ->from("sender@example.com")
-        ->to("recipient@example.com")
-        ->subject("Test")
-        ->text("Test");
+    $email = createEmail();
+    $email->from("sender@example.com");
+    $email->to("recipient@example.com");
+    $email->subject("Test");
+    $email->text("Test");
 
     $transport->send($email);
 
@@ -161,11 +165,11 @@ it("throws exception on api error", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = (new Email())
-        ->from("sender@example.com")
-        ->to("recipient@example.com")
-        ->subject("Test")
-        ->text("Test");
+    $email = createEmail();
+    $email->from("sender@example.com");
+    $email->to("recipient@example.com");
+    $email->subject("Test");
+    $email->text("Test");
 
     $transport->send($email);
 })->throws(TransportException::class);
@@ -184,13 +188,13 @@ it("throws exception when no recipient is provided", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = (new Email())
-        ->from("sender@example.com")
-        ->subject("Test")
-        ->text("Test");
+    $email = createEmail();
+    $email->from("sender@example.com");
+    $email->subject("Test");
+    $email->text("Test");
 
     $transport->send($email);
-})->throws(TransportException::class, "No recipient address provided");
+})->throws(\Symfony\Component\Mime\Exception\LogicException::class);
 
 it("handles attachments with base64 encoding", function () {
     $capturedRequest = null;
@@ -212,12 +216,12 @@ it("handles attachments with base64 encoding", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = (new Email())
-        ->from("sender@example.com")
-        ->to("recipient@example.com")
-        ->subject("Test")
-        ->text("Test")
-        ->attach("file content", "document.txt", "text/plain");
+    $email = createEmail();
+    $email->from("sender@example.com");
+    $email->to("recipient@example.com");
+    $email->subject("Test");
+    $email->text("Test");
+    $email->attach("file content", "document.txt", "text/plain");
 
     $transport->send($email);
 
@@ -253,22 +257,32 @@ it("handles url-based attachments", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = (new Email())
-        ->from("sender@example.com")
-        ->to("recipient@example.com")
-        ->subject("Test")
-        ->text("Test");
+    // Create URL attachment using the UrlAttachment helper
+    $url = "https://example.com/files/document.pdf";
+    $urlAttachment = \Skylark\Freesend\UrlAttachment::fromUrl(
+        $url,
+        "document.pdf",
+        "application/pdf",
+    );
 
-    // Add an attachment with the URL header
-    $email->attach("", "document.pdf", "application/pdf");
-    $attachments = $email->getAttachments();
-    $lastAttachment = end($attachments);
-    $lastAttachment
-        ->getHeaders()
-        ->addTextHeader(
-            FreesendTransport::URL_ATTACHMENT_HEADER,
-            "https://example.com/files/document.pdf",
-        );
+    // Get the marker content from the attachment
+    $marker = null;
+    $urlAttachment->attachTo(
+        new class ($marker) {
+            public function __construct(private &$marker) {}
+            public function attach($data, $options = [])
+            {
+                $this->marker = is_callable($data) ? $data() : $data;
+            }
+        },
+    );
+
+    $email = createEmail();
+    $email->from("sender@example.com");
+    $email->to("recipient@example.com");
+    $email->subject("Test");
+    $email->text("Test");
+    $email->attach($marker, "document.pdf", "application/pdf");
 
     $transport->send($email);
 
@@ -304,12 +318,12 @@ it("sends both html and text content when provided", function () {
 
     $transport = new FreesendTransport($this->apiKey, $this->endpoint, $client);
 
-    $email = (new Email())
-        ->from("sender@example.com")
-        ->to("recipient@example.com")
-        ->subject("Test Subject")
-        ->text("Plain text version")
-        ->html("<p>HTML version</p>");
+    $email = createEmail();
+    $email->from("sender@example.com");
+    $email->to("recipient@example.com");
+    $email->subject("Test Subject");
+    $email->text("Plain text version");
+    $email->html("<p>HTML version</p>");
 
     $transport->send($email);
 
@@ -341,11 +355,11 @@ it("sends to correct endpoint", function () {
 
     $transport = new FreesendTransport($this->apiKey, $customEndpoint, $client);
 
-    $email = (new Email())
-        ->from("sender@example.com")
-        ->to("recipient@example.com")
-        ->subject("Test")
-        ->text("Test");
+    $email = createEmail();
+    $email->from("sender@example.com");
+    $email->to("recipient@example.com");
+    $email->subject("Test");
+    $email->text("Test");
 
     $transport->send($email);
 

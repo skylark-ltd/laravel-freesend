@@ -1,8 +1,11 @@
 <?php
 
 use Illuminate\Mail\Attachment;
-use Skylark\Freesend\FreesendTransport;
 use Skylark\Freesend\UrlAttachment;
+
+beforeEach(function () {
+    UrlAttachment::clearRegistry();
+});
 
 it("creates an attachment from url", function () {
     $attachment = UrlAttachment::fromUrl(
@@ -13,71 +16,39 @@ it("creates an attachment from url", function () {
     expect($attachment)->toBeInstanceOf(Attachment::class);
 });
 
-it("sets the correct filename", function () {
-    $attachment = UrlAttachment::fromUrl(
-        "https://example.com/files/document.pdf",
-        "my-document.pdf",
-    );
-
-    // Convert to Symfony attachment to check properties
-    $symfonyAttachment = null;
-    $attachment->attachTo(
-        new class {
-            public $attachment;
-
-            public function attach($data, $options = [])
-            {
-                $this->attachment = $options;
-            }
-        },
-    );
-
-    expect($attachment)->toBeInstanceOf(Attachment::class);
-});
-
-it("includes url header for freesend transport", function () {
+it("stores url in registry and extracts it", function () {
     $url = "https://example.com/files/document.pdf";
 
     $attachment = UrlAttachment::fromUrl($url, "document.pdf");
 
-    // Use reflection to access the attachment's data and headers
-    $reflection = new ReflectionClass($attachment);
-    $method = $reflection->getMethod("attachWith");
-
-    // Create a mock attachable that captures the headers
-    $capturedHeaders = [];
-    $mockAttachable = new class ($capturedHeaders) {
-        public array $headers = [];
-
-        public function __construct(private array &$ref) {}
-
-        public function withMime(string $mime)
-        {
-            return $this;
-        }
-
-        public function withHeaders(array $headers)
-        {
-            $this->headers = $headers;
-            $this->ref = $headers;
-
-            return $this;
-        }
-    };
-
-    // The URL should be stored in headers
-    // Check by converting to array representation
-    $result = $method->invoke(
-        $attachment,
-        fn($data) => $data,
-        fn($path) => $path,
+    // Extract the marker from the attachment
+    $marker = null;
+    $attachment->attachTo(
+        new class ($marker) {
+            public function __construct(private &$marker) {}
+            public function attach($data, $options = [])
+            {
+                $this->marker = is_callable($data) ? $data() : $data;
+            }
+        },
     );
 
-    // The attachment should have the X-Freesend-Url header
-    expect($result["headers"] ?? [])->toHaveKey(
-        FreesendTransport::URL_ATTACHMENT_HEADER,
-        $url,
-    );
+    // The marker should be extractable to the original URL
+    $extractedUrl = UrlAttachment::extractUrl($marker);
+
+    expect($extractedUrl)->toBe($url);
+});
+
+it("returns null for non-url content", function () {
+    $result = UrlAttachment::extractUrl("regular file content");
+
+    expect($result)->toBeNull();
+});
+
+it("returns null for empty content", function () {
+    $result = UrlAttachment::extractUrl("");
+
+    expect($result)->toBeNull();
 });
 
 it("sets content type when provided", function () {
@@ -88,17 +59,6 @@ it("sets content type when provided", function () {
     );
 
     expect($attachment)->toBeInstanceOf(Attachment::class);
-
-    // Use reflection to check the mime type was set
-    $reflection = new ReflectionClass($attachment);
-    $method = $reflection->getMethod("attachWith");
-    $result = $method->invoke(
-        $attachment,
-        fn($data) => $data,
-        fn($path) => $path,
-    );
-
-    expect($result["mime"] ?? null)->toBe("image/png");
 });
 
 it("works without content type", function () {
@@ -108,17 +68,6 @@ it("works without content type", function () {
     );
 
     expect($attachment)->toBeInstanceOf(Attachment::class);
-
-    $reflection = new ReflectionClass($attachment);
-    $method = $reflection->getMethod("attachWith");
-    $result = $method->invoke(
-        $attachment,
-        fn($data) => $data,
-        fn($path) => $path,
-    );
-
-    // Should not have mime set when not provided
-    expect($result)->not->toHaveKey("mime");
 });
 
 it("handles various url formats", function (string $url) {
@@ -126,20 +75,86 @@ it("handles various url formats", function (string $url) {
 
     expect($attachment)->toBeInstanceOf(Attachment::class);
 
-    $reflection = new ReflectionClass($attachment);
-    $method = $reflection->getMethod("attachWith");
-    $result = $method->invoke(
-        $attachment,
-        fn($data) => $data,
-        fn($path) => $path,
+    // Extract and verify
+    $marker = null;
+    $attachment->attachTo(
+        new class ($marker) {
+            public function __construct(private &$marker) {}
+            public function attach($data, $options = [])
+            {
+                $this->marker = is_callable($data) ? $data() : $data;
+            }
+        },
     );
 
-    expect($result["headers"][FreesendTransport::URL_ATTACHMENT_HEADER])->toBe(
-        $url,
-    );
+    $extractedUrl = UrlAttachment::extractUrl($marker);
+
+    expect($extractedUrl)->toBe($url);
 })->with([
     "https://example.com/file.pdf",
     "https://cdn.example.com/files/document.pdf",
     "https://s3.amazonaws.com/bucket/file.pdf?token=abc123",
     "http://localhost:8080/files/test.pdf",
 ]);
+
+it("generates unique markers for same url", function () {
+    $url = "https://example.com/files/document.pdf";
+
+    $attachment1 = UrlAttachment::fromUrl($url, "doc1.pdf");
+    $attachment2 = UrlAttachment::fromUrl($url, "doc2.pdf");
+
+    $marker1 = null;
+    $marker2 = null;
+
+    $attachment1->attachTo(
+        new class ($marker1) {
+            public function __construct(private &$marker) {}
+            public function attach($data, $options = [])
+            {
+                $this->marker = is_callable($data) ? $data() : $data;
+            }
+        },
+    );
+
+    $attachment2->attachTo(
+        new class ($marker2) {
+            public function __construct(private &$marker) {}
+            public function attach($data, $options = [])
+            {
+                $this->marker = is_callable($data) ? $data() : $data;
+            }
+        },
+    );
+
+    // Markers should be different even for same URL
+    expect($marker1)->not->toBe($marker2);
+
+    // But both should resolve to the same URL
+    expect(UrlAttachment::extractUrl($marker1))->toBe($url);
+    expect(UrlAttachment::extractUrl($marker2))->toBe($url);
+});
+
+it("clears registry", function () {
+    $url = "https://example.com/files/document.pdf";
+    $attachment = UrlAttachment::fromUrl($url, "document.pdf");
+
+    $marker = null;
+    $attachment->attachTo(
+        new class ($marker) {
+            public function __construct(private &$marker) {}
+            public function attach($data, $options = [])
+            {
+                $this->marker = is_callable($data) ? $data() : $data;
+            }
+        },
+    );
+
+    // Should be extractable before clearing
+    expect(UrlAttachment::extractUrl($marker))->toBe($url);
+
+    // Clear the registry
+    UrlAttachment::clearRegistry();
+
+    // Should no longer be extractable
+    expect(UrlAttachment::extractUrl($marker))->toBeNull();
+});

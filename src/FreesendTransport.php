@@ -25,14 +25,6 @@ use Symfony\Component\Mime\Part\DataPart;
 class FreesendTransport extends AbstractTransport
 {
     /**
-     * Custom header name used to mark attachments for URL-based delivery.
-     *
-     * When this header is present on an attachment, the header value
-     * will be used as the attachment URL instead of base64-encoding the content.
-     */
-    public const URL_ATTACHMENT_HEADER = "X-Freesend-Url";
-
-    /**
      * Create a new Freesend transport instance.
      *
      * @param string $apiKey The Freesend API key for authentication.
@@ -179,7 +171,7 @@ class FreesendTransport extends AbstractTransport
      * Build the attachments array for the API payload.
      *
      * Supports both base64-encoded content attachments and URL-based attachments.
-     * URL attachments are identified by the presence of the X-Freesend-Url header.
+     * URL attachments are identified via the UrlAttachment registry.
      *
      * @param Email $email The email message containing attachments.
      *
@@ -192,18 +184,19 @@ class FreesendTransport extends AbstractTransport
         $attachments = [];
 
         foreach ($email->getAttachments() as $attachment) {
+            $body = $attachment->getBody();
+
             $attachmentData = [
                 "filename" => $attachment->getFilename() ?? "attachment",
             ];
 
-            $url = $this->getUrlFromAttachment($attachment);
+            // Check if this is a URL attachment via the registry
+            $url = UrlAttachment::extractUrl($body);
 
             if ($url !== null) {
                 $attachmentData["url"] = $url;
             } else {
-                $attachmentData["content"] = base64_encode(
-                    $attachment->getBody(),
-                );
+                $attachmentData["content"] = base64_encode($body);
             }
 
             $contentType = $attachment->getContentType();
@@ -215,26 +208,6 @@ class FreesendTransport extends AbstractTransport
         }
 
         return $attachments;
-    }
-
-    /**
-     * Extract the URL from a URL-based attachment, if present.
-     *
-     * Checks for the X-Freesend-Url header on the attachment part.
-     *
-     * @param DataPart $attachment The attachment to check.
-     *
-     * @return string|null The attachment URL, or null if not a URL attachment.
-     */
-    protected function getUrlFromAttachment(DataPart $attachment): ?string
-    {
-        $headers = $attachment->getPreparedHeaders();
-
-        if ($headers->has(self::URL_ATTACHMENT_HEADER)) {
-            return $headers->get(self::URL_ATTACHMENT_HEADER)->getBody();
-        }
-
-        return null;
     }
 
     /**
